@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training Readiness Algorithm</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,400;0,9..144,600;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f6f4;
+    --surface: #ffffff;
+    --surface2: #eef1ee;
+    --border: #d0d8d1;
+    --text: #1a2b1b;
+    --muted: #5a6e5b;
+    --accent: #2e7d34;
+    --accent2: #2e7d34;
+    --warn: #b07d10;
+    --danger: #b03020;
+    --rest: #1a5fa0;
+    --easy: #2e7d34;
+    --moderate: #b07d10;
+    --hard: #b05a10;
+    --avoid: #b03020;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 1.25rem 0.85rem 4rem;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .grain { display: none; }
+
+  .container { max-width: 820px; margin: 0 auto; position: relative; z-index: 1; }
+
+  header { margin-bottom: 3rem; }
+
+  .eyebrow {
+    font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 0.75rem;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 200;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  h1 em { font-style: italic; color: var(--accent); }
+
+  .subtitle {
+    font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em;
+    margin-top: 0.75rem;
+  }
+
+  /* SECTION HEADERS */
+  .section-label {
+    font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 1rem; padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* INPUT GRID */
+  .inputs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+
+  @media (max-width: 480px) {
+    .inputs-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    h1 { font-size: 1.6rem !important; }
+    .eyebrow { font-size: 0.7rem; }
+    .subtitle { font-size: 0.72rem; }
+    .section-label { font-size: 0.68rem; }
+    .input-cell label { font-size: 0.68rem; }
+    .input-cell .source-tag { font-size: 0.62rem; }
+    .input-cell input[type="number"],
+    .input-cell select { font-size: 1rem; }
+    .calc-btn { font-size: 0.85rem; padding: 1.1rem; }
+    .breakdown-row { flex-wrap: wrap; font-size: 0.72rem; }
+    .breakdown-value { min-width: auto; }
+    .rec-title { font-size: 1.4rem; }
+    .rec-subtitle { font-size: 0.7rem; }
+    .activity-pill { font-size: 0.7rem; }
+    .notes-block { font-size: 0.72rem; }
+    .algo-block { font-size: 0.7rem; }
+  }
+
+  .input-cell {
+    background: var(--surface);
+    padding: 1.25rem 1rem;
+    transition: background 0.15s;
+  }
+  .input-cell:hover { background: var(--surface2); }
+
+  .input-cell label {
+    display: block;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .input-cell .source-tag {
+    font-size: 0.55rem; letter-spacing: 0.1em;
+    color: var(--accent2); opacity: 0.8;
+    margin-bottom: 0.4rem;
+    display: block;
+  }
+
+  .input-cell input[type="number"],
+  .input-cell input[type="range"],
+  .input-cell select {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 500;
+    padding: 0.25rem 0;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .input-cell input:focus,
+  .input-cell select:focus {
+    border-bottom-color: var(--accent);
+  }
+
+  .input-cell select {
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .input-cell select option { background: #ffffff; color: #1a2b1b; }
+
+  .range-display {
+    font-size: 1.1rem; font-weight: 500;
+    color: var(--text);
+    margin-top: 0.25rem;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    height: 3px;
+    background: var(--border);
+    border: none !important;
+    border-bottom: none !important;
+    padding: 0 !important;
+    margin-top: 0.5rem;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  /* CALCULATE BUTTON */
+  .calc-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #ffffff;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 2rem;
+  }
+  .calc-btn:hover { background: #1d5c22; transform: translateY(-1px); }
+  .calc-btn:active { transform: translateY(0); }
+
+  /* RESULT */
+  #result { display: none; }
+  #result.visible { display: block; }
+
+  .readiness-bar-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-bottom: 1px;
+  }
+
+  .readiness-score-row {
+    display: flex; align-items: baseline; gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .score-num {
+    font-family: 'Fraunces', serif;
+    font-size: 4rem;
+    font-weight: 200;
+    line-height: 1;
+  }
+
+  .score-label {
+    font-size: 0.65rem; letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .bar-track {
+    height: 4px;
+    background: var(--border);
+    width: 100%;
+    position: relative;
+  }
+
+  .bar-fill {
+    height: 100%;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    width: 0%;
+  }
+
+  /* RECOMMENDATION CARD */
+  .rec-card {
+    border: 1px solid var(--border);
+    border-top: none;
+    padding: 1.75rem;
+    margin-bottom: 1px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .rec-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+
+  .rec-card.rest::before { background: var(--rest); }
+  .rec-card.easy::before { background: var(--easy); }
+  .rec-card.moderate::before { background: var(--moderate); }
+  .rec-card.hard::before { background: var(--hard); }
+  .rec-card.avoid::before { background: var(--avoid); }
+
+  .rec-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.6rem;
+    font-weight: 300;
+    margin-bottom: 0.25rem;
+  }
+
+  .rec-subtitle {
+    font-size: 0.65rem; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 1.25rem;
+  }
+
+  /* ACTIVITY PILLS */
+  .activities {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .activity-pill {
+    font-size: 0.65rem; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid;
+    cursor: default;
+  }
+
+  .activity-pill.green { border-color: var(--easy); color: var(--easy); }
+  .activity-pill.amber { border-color: var(--moderate); color: var(--moderate); }
+  .activity-pill.grey  { border-color: var(--muted); color: var(--muted); }
+  .activity-pill.red   { border-color: var(--danger); color: var(--danger); }
+
+  /* BREAKDOWN TABLE */
+  .breakdown {
+    border: 1px solid var(--border);
+    border-top: none;
+    margin-bottom: 2rem;
+  }
+
+  .breakdown-row {
+    display: flex; align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    gap: 1rem;
+    font-size: 0.7rem;
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+
+  .breakdown-metric { color: var(--muted); flex: 1; letter-spacing: 0.05em; }
+  .breakdown-value { font-weight: 500; min-width: 60px; text-align: right; }
+  .breakdown-signal { font-size: 0.6rem; padding: 0.2rem 0.5rem; letter-spacing: 0.08em; }
+  .signal-good { background: rgba(46,125,52,0.12); color: #1a6620; }
+  .signal-warn { background: rgba(176,125,16,0.12); color: #7a5500; }
+  .signal-bad  { background: rgba(176,48,32,0.12); color: #8a1a0a; }
+  .signal-neutral { background: rgba(90,110,91,0.12); color: var(--muted); }
+
+  .notes-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    padding: 1.25rem;
+    font-size: 0.68rem;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+  .notes-block strong { color: var(--text); }
+
+  /* ALGORITHM SECTION */
+  .algo-toggle {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 1px;
+    transition: all 0.15s;
+  }
+  .algo-toggle:hover { color: var(--text); border-color: var(--muted); }
+
+  .algo-block {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    padding: 1.5rem;
+    font-size: 0.65rem;
+    line-height: 1.9;
+    color: var(--muted);
+  }
+  .algo-block.open { display: block; }
+  .algo-block h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    margin-top: 1.25rem;
+  }
+  .algo-block h3:first-child { margin-top: 0; }
+  .algo-block .formula {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.03em;
+  }
+  .algo-block ul { padding-left: 1.2rem; }
+  .algo-block li { margin-bottom: 0.3rem; }
+
+  .sleep-warning {
+    background: rgba(176,48,32,0.07);
+    border: 1px solid var(--danger);
+    padding: 1rem 1.25rem;
+    font-size: 0.68rem;
+    color: #8a1a0a;
+    line-height: 1.7;
+    margin-bottom: 1px;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+  .animate-in { animation: fadeIn 0.4s ease forwards; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="container">
+
+  <header>
+    <p class="eyebrow">Daily Readiness Algorithm</p>
+    <h1>Train with <em>intention</em>,<br>recover with precision.</h1>
+    <p class="subtitle">// Ōura · Morpheus HRV · AutoSleep · Athlytic — integrated decision engine</p>
+  </header>
+
+  <p class="section-label">01 — Enter today's metrics</p>
+
+  <div class="inputs-grid" style="margin-bottom:1px">
+    <div class="input-cell" style="grid-column: 1 / -1; background: var(--surface2);">
+      <span class="source-tag">DATE</span>
+      <label>Session Date</label>
+      <input type="date" id="session_date" style="font-size:1rem; font-family:'DM Mono',monospace; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--text); width:100%; padding:0.25rem 0; outline:none;">
+    </div>
+  </div>
+
+  <div class="inputs-grid">
+
+    <!-- OURA -->
+    <div class="input-cell">
+      <span class="source-tag">ŌURA</span>
+      <label>Readiness Score</label>
+      <input type="number" id="oura_readiness" min="0" max="100" placeholder="0–100">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ŌURA</span>
+      <label>HRV (avg, ms)</label>
+      <input type="number" id="oura_hrv" min="10" max="150" placeholder="ms">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ŌURA</span>
+      <label>Resting HR (bpm)</label>
+      <input type="number" id="oura_rhr" min="30" max="100" placeholder="bpm">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ŌURA</span>
+      <label>Sleep Score</label>
+      <input type="number" id="oura_sleep" min="0" max="100" placeholder="0–100">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ŌURA</span>
+      <label>Deep Sleep (mins)</label>
+      <input type="number" id="oura_deep" min="0" max="240" placeholder="mins">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ŌURA</span>
+      <label>REM Sleep (mins)</label>
+      <input type="number" id="oura_rem" min="0" max="240" placeholder="mins">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ŌURA</span>
+      <label>Total Sleep (mins)</label>
+      <input type="number" id="oura_total" min="0" max="720" placeholder="mins">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ŌURA</span>
+      <label>Awakenings (count)</label>
+      <input type="number" id="oura_awakenings" min="0" max="30" placeholder="times woken">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ŌURA</span>
+      <label>Sleep Latency (mins)</label>
+      <input type="number" id="oura_latency" min="0" max="120" placeholder="mins to fall asleep">
+    </div>
+
+    <!-- MORPHEUS -->
+    <div class="input-cell">
+      <span class="source-tag">MORPHEUS HRV</span>
+      <label>Morning HRV (ms)</label>
+      <input type="number" id="morph_hrv" min="10" max="150" placeholder="ms">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">MORPHEUS HRV</span>
+      <label>HRV 7-day Baseline</label>
+      <input type="number" id="morph_baseline" min="10" max="150" placeholder="ms">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">MORPHEUS</span>
+      <label>Morpheus Score</label>
+      <input type="number" id="morph_score" min="0" max="100" placeholder="0–100">
+    </div>
+
+    <!-- AUTOSLEEP -->
+    <div class="input-cell">
+      <span class="source-tag">AUTOSLEEP</span>
+      <label>Sleep Quality % <span style="font-size:0.55rem;opacity:0.6">(optional)</span></label>
+      <input type="number" id="as_quality" min="0" max="100" placeholder="%">
+    </div>
+
+    <!-- ATHLYTIC -->
+    <div class="input-cell">
+      <span class="source-tag">ATHLYTIC</span>
+      <label>Battery %</label>
+      <input type="number" id="ath_battery" min="0" max="100" placeholder="0–100">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ATHLYTIC</span>
+      <label>Training Status <span style="font-size:0.55rem;opacity:0.6">(optional)</span></label>
+      <select id="ath_load">
+        <option value="unknown" selected>Not available</option>
+        <option value="optimal">Optimal</option>
+        <option value="low">Low / Detraining</option>
+        <option value="high">High / Strained</option>
+        <option value="overreaching">Overreaching</option>
+      </select>
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">ATHLYTIC</span>
+      <label>VO2 Max Trend</label>
+      <select id="ath_vo2">
+        <option value="" disabled selected>Select…</option>
+        <option value="stable">Stable</option>
+        <option value="improving">Improving</option>
+        <option value="declining">Declining</option>
+      </select>
+    </div>
+
+    <!-- SUBJECTIVE -->
+    <div class="input-cell">
+      <span class="source-tag">SUBJECTIVE</span>
+      <label>How do you feel? (1–10)</label>
+      <input type="number" id="subjective_feel" min="1" max="10" placeholder="1 = terrible, 10 = great">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">SUBJECTIVE</span>
+      <label>Muscle soreness (1–5)</label>
+      <input type="number" id="soreness" min="1" max="5" placeholder="1 = none, 5 = severe">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">CONTEXT</span>
+      <label>Days since last hard session</label>
+      <input type="number" id="days_since_hard" min="0" max="14" placeholder="days">
+    </div>
+    <div class="input-cell">
+      <span class="source-tag">CONTEXT</span>
+      <label>Last 3 nights: sleep ok?</label>
+      <select id="sleep_trend">
+        <option value="" disabled selected>Select…</option>
+        <option value="good">Consistently good</option>
+        <option value="mixed">Mixed</option>
+        <option value="poor">Consistently poor</option>
+      </select>
+    </div>
+
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">▶ Calculate Training Recommendation</button>
+
+  <div id="result">
+
+    <div class="readiness-bar-wrap animate-in">
+      <p class="section-label">02 — Composite readiness</p>
+      <div id="result-date" style="font-size:0.65rem; color:var(--muted); margin-bottom:0.75rem; letter-spacing:0.05em;"></div>
+      <div class="readiness-score-row">
+        <span class="score-num" id="score-display" style="color: var(--accent)">—</span>
+        <div>
+          <div class="score-label" id="score-band">—</div>
+          <div style="font-size:0.6rem; color:var(--muted); margin-top:0.2rem">/ 100 composite</div>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="bar-fill"></div></div>
+    </div>
+
+    <div id="sleep-warning" class="sleep-warning" style="display:none">
+      ⚠ <strong>Sleep-disruption risk flagged.</strong> Your recent sleep pattern combined with planned training intensity suggests elevated disruption risk. Prioritise session timing (morning preferred), keep intensity conservative, and enforce a wind-down routine ≥90 min before bed.
+    </div>
+
+    <div class="rec-card animate-in" id="rec-card" style="margin-top:1px">
+      <p class="section-label" id="rec-section-label">03 — Recommendation</p>
+      <div class="rec-title" id="rec-title">—</div>
+      <div class="rec-subtitle" id="rec-subtitle">—</div>
+      <div class="activities" id="activities"></div>
+      <div style="font-size:0.68rem; line-height:1.8; color: var(--muted)" id="rec-detail"></div>
+    </div>
+
+    <p class="section-label" style="margin-top:2rem">04 — Signal breakdown</p>
+    <div class="breakdown" id="breakdown"></div>
+
+    <div class="notes-block animate-in" id="notes-block"></div>
+
+    <!-- AIRTABLE SAVE -->
+    <div style="margin-top: 1.5rem; margin-bottom: 1rem;">
+      <button class="calc-btn" id="airtable-btn" onclick="saveToAirtable()" style="background: #1a5fa0; margin-bottom:0.5rem;">
+        ☁ Save to Airtable
+      </button>
+      <div id="airtable-status" style="font-size:0.68rem; text-align:center; min-height:1.2rem; color: var(--muted);"></div>
+    </div>
+
+  </div>
+
+  <!-- AIRTABLE SETTINGS PANEL -->
+  <div id="settings-panel" style="display:none; margin-top:1.5rem; background:var(--surface); border:1px solid var(--border); padding:1.25rem;">
+    <p class="section-label">Airtable Setup — one time only</p>
+    <p style="font-size:0.68rem; color:var(--muted); line-height:1.7; margin-bottom:1rem;">
+      Paste your Airtable Personal Access Token below. It will be saved privately on this device only — it is never stored in the app code.
+    </p>
+    <input type="password" id="token-input"
+      placeholder="patXXXXXXXXXXXXXX..."
+      style="width:100%; font-family:'DM Mono',monospace; font-size:0.8rem;
+             background:var(--bg); border:1px solid var(--border); color:var(--text);
+             padding:0.6rem 0.75rem; margin-bottom:0.75rem; outline:none;">
+    <button onclick="saveToken()" class="calc-btn" style="margin-bottom:0.5rem;">Save Token</button>
+    <button onclick="clearToken()" style="background:none; border:1px solid var(--border);
+      color:var(--muted); font-family:'DM Mono',monospace; font-size:0.6rem;
+      letter-spacing:0.1em; padding:0.4rem 0.75rem; cursor:pointer; width:100%;">
+      Clear Saved Token
+    </button>
+    <div id="token-status" style="font-size:0.65rem; color:var(--muted); margin-top:0.5rem; text-align:center;"></div>
+  </div>
+
+  <div style="margin-top: 0.75rem; text-align:right;">
+    <button onclick="document.getElementById('settings-panel').style.display = document.getElementById('settings-panel').style.display === 'none' ? 'block' : 'none';"
+      style="background:none; border:none; color:var(--muted); font-family:'DM Mono',monospace;
+             font-size:0.6rem; letter-spacing:0.1em; cursor:pointer; text-decoration:underline;">
+      ⚙ Airtable settings
+    </button>
+  </div>
+
+  <div style="margin-top: 1rem">
+    <button class="algo-toggle" onclick="toggleAlgo(this)">
+      ↓ View Algorithm Logic
+    </button>
+    <div class="algo-block" id="algo-block">
+      <h3>Composite Score Formula</h3>
+      <p>A weighted composite of all inputs, producing a 0–100 readiness score:</p>
+      <div class="formula">
+        S = (HRV_norm×0.28) + (Sleep_norm×0.22) + (Recovery_norm×0.18)
+          + (Readiness_norm×0.15) + (Subjective_norm×0.10) + (Context_adj×0.07)
+      </div>
+      <p>Each component is normalised 0–1 before weighting. Context adjustors (days since hard session, load status, sleep trend) apply multipliers.</p>
+
+      <h3>HRV Composite (weight: 28%)</h3>
+      <ul>
+        <li>Morpheus morning HRV vs your 7-day baseline → % deviation score</li>
+        <li>Ōura overnight HRV average contributes secondary signal</li>
+        <li>&gt;10% above baseline = strong positive; &gt;10% below = strong negative</li>
+        <li>Acute-to-chronic ratio applied if baseline entered</li>
+      </ul>
+
+      <h3>Sleep Composite (weight: 22%)</h3>
+      <ul>
+        <li>AutoSleep Quality % (primary), Total minutes, Deep sleep minutes</li>
+        <li>Ōura Sleep Score cross-referenced</li>
+        <li>Deep sleep &lt; 60 min penalises score regardless of total sleep</li>
+        <li>Trend (3-night) applies multiplicative penalty if "poor"</li>
+      </ul>
+
+      <h3>Recovery Composite (weight: 18%)</h3>
+      <ul>
+        <li>Athlytic Recovery Score directly normalised</li>
+        <li>Training load status: Optimal=1.0×, High=0.8×, Overreaching=0.5×</li>
+      </ul>
+
+      <h3>Readiness Composite (weight: 15%)</h3>
+      <ul>
+        <li>Ōura Readiness + AutoSleep Readiness averaged</li>
+        <li>Morpheus Score contributes 30% weighting here</li>
+      </ul>
+
+      <h3>Subjective (weight: 10%)</h3>
+      <ul>
+        <li>Self-reported wellbeing (1–10) and soreness (1–5, inverted)</li>
+        <li>Strong override: subjective ≤3 → forces Rest regardless of objective data</li>
+      </ul>
+
+      <h3>Context Adjustors (weight: 7%)</h3>
+      <ul>
+        <li>Days since last hard session: 0–1d = −10pts, 2d = neutral, 3+d = +5pts</li>
+        <li>VO2 Max declining → mild training encouragement (+3)</li>
+        <li>Resting HR &gt; personal norm threshold → −8pts</li>
+      </ul>
+
+      <h3>Sleep Disruption Risk Model</h3>
+      <p>Flag triggered when ≥2 of:</p>
+      <ul>
+        <li>Sleep trend = poor OR AutoSleep quality &lt; 65%</li>
+        <li>Score &gt; 70 (temptation to train hard exists)</li>
+        <li>Days since hard session ≤ 1</li>
+        <li>Athlytic load = High or Overreaching</li>
+        <li>Deep sleep &lt; 1.0h</li>
+      </ul>
+
+      <h3>Zone → Activity Mapping</h3>
+      <div class="formula">
+        85–100 → Hard: ocean swim (intervals), resistance training, bike HIIT
+        70–84  → Moderate: ocean swim (steady), resistance (moderate), bike endurance
+        55–69  → Easy: walking, gentle swim, light bike, yoga
+        40–54  → Rest/active recovery: walking only, stretching, breathwork
+        0–39   → Full rest: no structured training
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleAlgo(btn) {
+  const block = document.getElementById('algo-block');
+  block.classList.toggle('open');
+  btn.textContent = block.classList.contains('open') ? '↑ Hide Algorithm Logic' : '↓ View Algorithm Logic';
+}
+
+function norm(val, min, max) {
+  return Math.max(0, Math.min(1, (val - min) / (max - min)));
+}
+
+function calculate() {
+  // --- Read inputs ---
+  const oura_r    = parseFloat(document.getElementById('oura_readiness').value) || 75;
+  const oura_hrv  = parseFloat(document.getElementById('oura_hrv').value) || 50;
+  const oura_rhr  = parseFloat(document.getElementById('oura_rhr').value) || 56;
+  const oura_sl   = parseFloat(document.getElementById('oura_sleep').value) || 75;
+
+  // Ōura sleep detail (in minutes; convert to hours internally)
+  const oura_deep_mins  = parseFloat(document.getElementById('oura_deep').value) || 0;
+  const oura_rem_mins   = parseFloat(document.getElementById('oura_rem').value) || 0;
+  const oura_total_mins = parseFloat(document.getElementById('oura_total').value) || 0;
+  const oura_awakenings = parseFloat(document.getElementById('oura_awakenings').value) || 0;
+  const oura_latency    = parseFloat(document.getElementById('oura_latency').value);  // mins; blank = not entered
+  const oura_deep  = oura_deep_mins / 60;
+  const oura_rem   = oura_rem_mins / 60;
+  const oura_total = oura_total_mins / 60;
+
+  const m_hrv     = parseFloat(document.getElementById('morph_hrv').value) || 50;
+  const m_base    = parseFloat(document.getElementById('morph_baseline').value) || 50;
+  const m_score   = parseFloat(document.getElementById('morph_score').value) || 70;
+
+  const as_qual   = parseFloat(document.getElementById('as_quality').value) || 0; // optional
+
+  // Athlytic — Battery is primary signal
+  const ath_battery = parseFloat(document.getElementById('ath_battery').value) || 70;
+  const ath_load    = document.getElementById('ath_load').value || 'optimal';
+  const ath_vo2     = document.getElementById('ath_vo2').value || 'stable';
+
+  const subj_feel = parseFloat(document.getElementById('subjective_feel').value) || 5;
+  const soreness  = parseFloat(document.getElementById('soreness').value) || 3;
+  const days_hard = parseFloat(document.getElementById('days_since_hard').value) || 2;
+  const sl_trend  = document.getElementById('sleep_trend').value || 'mixed';
+
+  // --- HRV Composite (28%) ---
+  const hrv_dev = m_base > 0 ? (m_hrv - m_base) / m_base : 0;
+  const hrv_dev_score = Math.min(1, Math.max(0, 0.5 + hrv_dev * 2.5));
+  const hrv_oura_norm = norm(oura_hrv, 15, 100);
+  const hrv_composite = hrv_dev_score * 0.65 + hrv_oura_norm * 0.35;
+
+  // --- Sleep Composite (22%) ---
+  // Deep sleep: good >75min, adequate 45–75, warn <45 (was triggering warn at <60 which was too aggressive)
+  const deep_score = oura_deep_mins > 0
+    ? (oura_deep >= 1.25 ? 1 : oura_deep >= 0.9 ? 0.8 : oura_deep >= 0.6 ? 0.6 : oura_deep >= 0.45 ? 0.45 : 0.3)
+    : 0.6;
+
+  // REM sleep: good >90min, adequate 60–90, warn <45
+  const rem_score = oura_rem_mins > 0
+    ? (oura_rem >= 1.5 ? 1 : oura_rem >= 1.0 ? 0.8 : oura_rem >= 0.75 ? 0.65 : oura_rem >= 0.5 ? 0.45 : 0.3)
+    : 0.6;
+
+  // Sleep latency: ideal 10–20 min; <5 min may signal excess fatigue; >30 min = difficulty falling asleep
+  const latency_score = !oura_latency ? 0.7
+    : oura_latency <= 5  ? 0.7   // very fast — possible excess fatigue, treat as neutral
+    : oura_latency <= 20 ? 1.0   // ideal
+    : oura_latency <= 30 ? 0.8   // slightly elevated, fine
+    : oura_latency <= 45 ? 0.55  // taking a while
+    : 0.35;                       // difficulty sleeping
+
+  // Total sleep
+  const total_norm = oura_total_mins > 0 ? norm(oura_total, 4, 9) : 0.6;
+
+  // Awakenings penalty: 0–1 = fine, 2–3 = mild, 4–5 = moderate, 6+ = significant
+  const awake_score = oura_awakenings <= 1 ? 1 : oura_awakenings <= 3 ? 0.8 : oura_awakenings <= 5 ? 0.6 : 0.35;
+
+  // Ōura sleep score
+  const oura_sl_n = norm(oura_sl, 40, 100);
+
+  // AutoSleep quality (optional cross-check, low weight)
+  const as_qual_n = as_qual > 0 ? norm(as_qual, 40, 100) : oura_sl_n;
+
+  const trend_mult = sl_trend === 'good' ? 1.0 : sl_trend === 'mixed' ? 0.85 : 0.65;
+
+  const sleep_composite = (
+    deep_score     * 0.23 +
+    rem_score      * 0.18 +
+    total_norm     * 0.18 +
+    oura_sl_n      * 0.15 +
+    awake_score    * 0.12 +
+    latency_score  * 0.06 +
+    as_qual_n      * 0.08
+  ) * trend_mult;
+
+  // --- Recovery Composite (18%) ---
+  // Athlytic Battery is primary; load status multiplier applied
+  const load_mult = { optimal:1.0, low:0.9, high:0.75, overreaching:0.5, unknown:1.0 }[ath_load];
+  const recovery_composite = norm(ath_battery, 10, 100) * load_mult;
+
+  // --- Readiness Composite (15%) ---
+  const readiness_composite = norm(oura_r, 20, 100) * 0.7 + norm(m_score, 20, 100) * 0.3;
+
+  // --- Subjective (10%) ---
+  const feel_norm = norm(subj_feel, 1, 10);
+  const sore_norm = norm(6 - soreness, 1, 5); // inverted
+  const subj_composite = feel_norm * 0.65 + sore_norm * 0.35;
+
+  // --- Context (7%) ---
+  let ctx = 0.5;
+  if (days_hard <= 1) ctx -= 0.15;
+  else if (days_hard >= 3) ctx += 0.1;
+  if (ath_vo2 === 'declining') ctx += 0.05;
+  if (ath_vo2 === 'improving') ctx += 0.03;
+  if (oura_rhr > 70) ctx -= 0.15;
+  else if (oura_rhr > 63) ctx -= 0.08;
+  ctx = Math.max(0, Math.min(1, ctx));
+
+  // --- COMPOSITE ---
+  let score = (
+    hrv_composite      * 0.28 +
+    sleep_composite    * 0.22 +
+    recovery_composite * 0.18 +
+    readiness_composite* 0.15 +
+    subj_composite     * 0.10 +
+    ctx                * 0.07
+  ) * 100;
+
+  score = Math.round(Math.max(0, Math.min(100, score)));
+
+  // Hard overrides
+  if (subj_feel > 0 && subj_feel <= 3) score = Math.min(score, 38);
+  if (soreness >= 5) score = Math.min(score, 45);
+
+  // --- ZONE ---
+  let zone, rec_title, rec_sub, activities, detail;
+
+  if (score >= 85) {
+    zone = 'hard';
+    rec_title = 'Train Hard';
+    rec_sub = 'Full capacity — your body is primed for high-intensity work.';
+    activities = [
+      {label:'Ocean swim — intervals', cls:'green'},
+      {label:'Resistance training', cls:'green'},
+      {label:'Bike HIIT', cls:'green'},
+      {label:'Ocean swim — distance', cls:'green'},
+    ];
+    detail = 'All systems are go. HRV is at or above baseline, sleep quality is strong, and recovery markers look excellent. This is your window for meaningful adaptation. Aim for a session that challenges your cardiovascular or neuromuscular system. Ensure you eat adequately before and after, and don\'t cut the cooldown short — you\'ve earned the recovery time.';
+  } else if (score >= 70) {
+    zone = 'moderate';
+    rec_title = 'Moderate Training';
+    rec_sub = 'Good readiness — build, but don\'t push to the edge today.';
+    activities = [
+      {label:'Ocean swim — steady', cls:'green'},
+      {label:'Bike — endurance pace', cls:'green'},
+      {label:'Resistance training (moderate)', cls:'amber'},
+      {label:'Walking — brisk', cls:'green'},
+    ];
+    detail = 'Your readiness is solid but not peak. A well-structured moderate session will provide positive training stimulus without accumulating excess fatigue. Keep RPE between 6–7/10. For ocean swimming, maintain an aerobic pace without sprint efforts. For resistance work, reduce volume by ~20% from your typical hard day.';
+  } else if (score >= 55) {
+    zone = 'easy';
+    rec_title = 'Easy / Zone 2 Only';
+    rec_sub = 'Reduced readiness — move gently, prioritise the process.';
+    activities = [
+      {label:'Walking', cls:'green'},
+      {label:'Gentle ocean swim', cls:'amber'},
+      {label:'Easy bike ride', cls:'amber'},
+      {label:'Yoga / mobility', cls:'green'},
+      {label:'Resistance training', cls:'grey'},
+    ];
+    detail = 'Objective markers suggest your body is still working to recover. Light movement is beneficial — it promotes circulation and mental wellbeing — but pushing intensity will likely deepen your fatigue hole and disrupt tonight\'s sleep. Keep ocean swims to easy, non-competitive pacing. Resistance training is not recommended today.';
+  } else if (score >= 40) {
+    zone = 'rest';
+    rec_title = 'Active Recovery';
+    rec_sub = 'Your body needs restoration, not stimulation.';
+    activities = [
+      {label:'Walking', cls:'green'},
+      {label:'Stretching', cls:'green'},
+      {label:'Breathwork', cls:'green'},
+      {label:'Ocean swim', cls:'grey'},
+      {label:'Resistance training', cls:'red'},
+    ];
+    detail = 'Multiple markers are indicating accumulated fatigue or insufficient recovery. Any structured training today is likely counterproductive. A gentle walk and mobility work are fine. Focus on sleep hygiene: consistent bedtime, cool room, no screens 90 min before sleep. Hydration and nutrition are your best tools today.';
+  } else {
+    zone = 'avoid';
+    rec_title = 'Full Rest';
+    rec_sub = 'Do not train. Recovery is the only session today.';
+    activities = [
+      {label:'Walking only (brief)', cls:'amber'},
+      {label:'All training', cls:'red'},
+    ];
+    detail = 'Your readiness score is in the critical zone. Attempting to train is likely to deepen fatigue, extend your recovery timeline, and disrupt sleep further. This is not a failure — this is the algorithm working as intended. Rest, eat well, sleep early if possible, and reassess tomorrow.';
+  }
+
+  // --- Sleep disruption risk ---
+  let risk_flags = 0;
+  if (sl_trend === 'poor' || (as_qual > 0 && as_qual < 65)) risk_flags++;
+  if (score > 70) risk_flags++;
+  if (days_hard <= 1) risk_flags++;
+  if (ath_load === 'high' || ath_load === 'overreaching') risk_flags++;
+  if (oura_deep_mins > 0 && oura_deep < 1.0) risk_flags++;
+  if (oura_awakenings >= 5) risk_flags++;
+  const show_sleep_warning = risk_flags >= 2;
+
+  // --- RENDER ---
+  const result = document.getElementById('result');
+  result.classList.add('visible');
+
+  const dateVal = document.getElementById('session_date').value;
+  const dateEl = document.getElementById('result-date');
+  if (dateVal) {
+    const d = new Date(dateVal + 'T00:00:00');
+    dateEl.textContent = d.toLocaleDateString('en-AU', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  } else { dateEl.textContent = ''; }
+
+  // Score
+  document.getElementById('score-display').textContent = score;
+  document.getElementById('score-display').style.color = `var(--${zone === 'hard' ? 'easy' : zone === 'moderate' ? 'warn' : zone === 'easy' ? 'warn' : zone === 'rest' ? 'rest' : 'danger'})`;
+  const bands = { hard:'Peak Readiness', moderate:'Good Readiness', easy:'Reduced Readiness', rest:'Low Readiness', avoid:'Critical — Rest Only' };
+  document.getElementById('score-band').textContent = bands[zone];
+
+  const barColors = { hard:'var(--easy)', moderate:'var(--warn)', easy:'var(--warn)', rest:'var(--rest)', avoid:'var(--danger)' };
+  const bar = document.getElementById('bar-fill');
+  bar.style.background = barColors[zone];
+  setTimeout(() => bar.style.width = score + '%', 50);
+
+  document.getElementById('sleep-warning').style.display = show_sleep_warning ? 'block' : 'none';
+
+  const card = document.getElementById('rec-card');
+  card.className = `rec-card animate-in ${zone}`;
+  document.getElementById('rec-title').textContent = rec_title;
+  document.getElementById('rec-subtitle').textContent = rec_sub;
+  document.getElementById('rec-detail').textContent = detail;
+  document.getElementById('activities').innerHTML = activities.map(a => `<span class="activity-pill ${a.cls}">${a.label}</span>`).join('');
+
+  // Breakdown signals
+  const hrv_pct    = Math.round(hrv_dev * 100);
+  const hrv_signal = hrv_pct >= 5 ? 'good' : hrv_pct >= -5 ? 'neutral' : hrv_pct >= -15 ? 'warn' : 'bad';
+  const hrv_label  = hrv_pct > 0 ? `+${hrv_pct}% above baseline` : `${hrv_pct}% below baseline`;
+
+  // deep: warn only below 45min, neutral 45–75, good above 75
+  const deep_sig   = oura_deep >= 1.25 ? 'good' : oura_deep >= 0.75 ? 'neutral' : oura_deep >= 0.45 ? 'warn' : oura_deep_mins > 0 ? 'bad' : 'neutral';
+  const deep_note  = oura_deep_mins > 0 ? (oura_deep >= 1.25 ? 'Excellent' : oura_deep >= 0.75 ? 'Good' : oura_deep >= 0.45 ? 'Below average' : 'Very low') : 'Not entered';
+
+  // REM: warn only below 45min, neutral 45–90, good above 90
+  const rem_sig    = oura_rem >= 1.5 ? 'good' : oura_rem >= 0.75 ? 'neutral' : oura_rem >= 0.5 ? 'warn' : oura_rem_mins > 0 ? 'bad' : 'neutral';
+  const rem_note   = oura_rem_mins > 0 ? (oura_rem >= 1.5 ? 'Excellent' : oura_rem >= 0.75 ? 'Good' : oura_rem >= 0.5 ? 'Below average' : 'Very low') : 'Not entered';
+
+  const latency_sig  = !oura_latency ? 'neutral'
+    : oura_latency <= 5  ? 'neutral'
+    : oura_latency <= 20 ? 'good'
+    : oura_latency <= 30 ? 'neutral'
+    : oura_latency <= 45 ? 'warn'
+    : 'bad';
+  const latency_note = !oura_latency ? 'Not entered'
+    : oura_latency <= 5  ? 'Very fast — possible fatigue signal'
+    : oura_latency <= 20 ? 'Ideal range'
+    : oura_latency <= 30 ? 'Slightly elevated'
+    : oura_latency <= 45 ? 'Difficulty settling'
+    : 'Significant sleep onset difficulty';
+  const total_sig  = oura_total >= 8 ? 'good' : oura_total >= 6.5 ? 'neutral' : oura_total_mins > 0 ? 'warn' : 'neutral';
+  const awake_sig  = oura_awakenings <= 1 ? 'good' : oura_awakenings <= 3 ? 'neutral' : oura_awakenings <= 5 ? 'warn' : 'bad';
+  const bat_sig    = ath_battery >= 70 ? 'good' : ath_battery >= 50 ? 'warn' : 'bad';
+  const load_sig   = {optimal:'good', low:'warn', high:'warn', overreaching:'bad', unknown:'neutral'}[ath_load];
+  const load_display = ath_load === 'unknown' ? '—' : ath_load;
+  const rhr_sig    = oura_rhr < 56 ? 'good' : oura_rhr < 65 ? 'neutral' : oura_rhr < 72 ? 'warn' : 'bad';
+  const subj_sig   = subj_feel >= 7 ? 'good' : subj_feel >= 5 ? 'neutral' : subj_feel >= 3 ? 'warn' : 'bad';
+
+  const rows = [
+    { metric:'Morpheus HRV vs baseline',  value:`${m_hrv} ms`,                           note: hrv_label,    sig: hrv_signal },
+    { metric:'Ōura overnight HRV',        value:`${oura_hrv} ms`,                        note:'Overnight avg', sig: oura_hrv >= 50 ? 'good' : oura_hrv >= 35 ? 'neutral' : 'warn' },
+    { metric:'Ōura deep sleep',           value: oura_deep_mins ? `${oura_deep_mins} min` : '—', note: deep_note, sig: deep_sig },
+    { metric:'Ōura REM sleep',            value: oura_rem_mins  ? `${oura_rem_mins} min`  : '—', note: rem_note,  sig: rem_sig  },
+    { metric:'Ōura total sleep',          value: oura_total_mins ? `${oura_total_mins} min` : '—', note:'',       sig: total_sig },
+    { metric:'Ōura sleep latency',        value: oura_latency ? `${oura_latency} min` : '—', note: latency_note, sig: latency_sig },
+    { metric:'Ōura awakenings',           value: oura_awakenings > 0 ? `${oura_awakenings}×` : '—', note: oura_awakenings <= 1 ? 'Minimal' : oura_awakenings <= 3 ? 'Moderate' : 'Disrupted', sig: awake_sig },
+    { metric:'Athlytic battery',          value:`${ath_battery}%`,                       note:'',            sig: bat_sig  },
+    { metric:'Training status (Athlytic)',value: load_display,                            note: ath_load === 'unknown' ? 'Not entered — no penalty applied' : '', sig: load_sig },
+    { metric:'Ōura resting HR',           value:`${oura_rhr} bpm`,                       note:'',            sig: rhr_sig  },
+    { metric:'Subjective wellbeing',      value:`${subj_feel}/10`,                       note:`Soreness: ${soreness}/5`, sig: subj_sig },
+    { metric:'Sleep trend (3 nights)',    value: sl_trend,                                note:'',            sig: sl_trend === 'good' ? 'good' : sl_trend === 'mixed' ? 'warn' : 'bad' },
+    { metric:'Days since hard session',   value:`${days_hard}d`,                         note:'',            sig: days_hard <= 1 ? 'warn' : days_hard >= 3 ? 'good' : 'neutral' },
+  ];
+
+  document.getElementById('breakdown').innerHTML = rows.map(r => `
+    <div class="breakdown-row">
+      <span class="breakdown-metric">${r.metric}</span>
+      <span class="breakdown-value">${r.value}</span>
+      ${r.note ? `<span style="font-size:0.6rem;color:var(--muted);flex:1">${r.note}</span>` : '<span style="flex:1"></span>'}
+      <span class="breakdown-signal signal-${r.sig}">${r.sig.toUpperCase()}</span>
+    </div>`).join('');
+
+  // Notes
+  const noteParts = [];
+  if (hrv_pct < -15) noteParts.push('<strong>HRV significantly suppressed.</strong> This is often the most reliable early warning sign. Do not override this signal with subjective motivation.');
+  if (oura_deep_mins > 0 && oura_deep < 0.75) noteParts.push('<strong>Deep sleep was low.</strong> Growth hormone release and neuromuscular recovery are impaired. Prioritise conditions for deep sleep tonight: cool, dark, no alcohol, consistent bedtime.');
+  if (oura_latency > 45) noteParts.push(`<strong>Sleep latency was ${oura_latency} minutes.</strong> Taking a long time to fall asleep often signals elevated cortisol, anxiety, or an overstimulated nervous system. Avoid screens and intense activity in the 90 minutes before bed.`);
+  if (oura_rem_mins > 0 && oura_rem < 0.75) noteParts.push('<strong>REM sleep was low.</strong> REM is critical for cognitive recovery, mood regulation, and motor learning. Stress, alcohol, and late-night exercise are common suppressors.');
+  if (oura_awakenings >= 5) noteParts.push(`<strong>${oura_awakenings} awakenings recorded.</strong> Fragmented sleep dramatically reduces restorative value even when total hours look adequate. Investigate triggers: bladder, noise, temperature, sleep apnoea.`);
+  if (sl_trend === 'poor') noteParts.push('<strong>Consecutive poor sleep nights detected.</strong> Cumulative sleep debt amplifies injury risk and impairs adaptation. Recovery is compounding — take it seriously.');
+  if (ath_load === 'overreaching') noteParts.push('<strong>Overreaching load detected.</strong> Training stimulus exceeds adaptation capacity. Forced rest now prevents extended breakdown later.');
+  if (oura_rhr > 65) noteParts.push('<strong>Elevated resting heart rate.</strong> Often indicates residual inflammation, dehydration, or systemic stress. Check hydration and consider if external stressors are contributing.');
+  if (days_hard <= 1) noteParts.push('<strong>Hard session was recent.</strong> The adaptation from yesterday\'s work happens during recovery, not during the session itself. Protect it.');
+  if (noteParts.length === 0) noteParts.push('<strong>No critical flags.</strong> Your metrics look balanced. Trust the process and execute your session with intention.');
+
+  document.getElementById('notes-block').innerHTML = noteParts.join('<br><br>');
+  result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Store values for Airtable save
+  window._lastEntry = {
+    date:           document.getElementById('session_date').value || new Date().toISOString().split('T')[0],
+    score:          score,
+    recommendation: rec_title,
+    oura_r:         oura_r,
+    oura_hrv:       oura_hrv,
+    oura_rhr:       oura_rhr,
+    oura_sl:        oura_sl,
+    oura_deep:      oura_deep_mins || '',
+    oura_rem:       oura_rem_mins  || '',
+    oura_total:     oura_total_mins|| '',
+    oura_awakenings:oura_awakenings|| '',
+    oura_latency:   oura_latency   || '',
+    m_hrv:          m_hrv,
+    m_base:         m_base,
+    hrv_pct:        Math.round(hrv_dev * 100),
+    m_score:        m_score,
+    as_qual:        as_qual || '',
+    ath_battery:    ath_battery,
+    ath_load:       ath_load === 'unknown' ? '' : ath_load,
+    ath_vo2:        ath_vo2,
+    subj_feel:      subj_feel || '',
+    soreness:       soreness  || '',
+    days_hard:      days_hard || '',
+    sl_trend:       sl_trend,
+    sleep_risk:     show_sleep_warning,
+  };
+
+  // Reset save button
+  const btn = document.getElementById('airtable-btn');
+  if (btn) { btn.textContent = '☁ Save to Airtable'; btn.disabled = false; }
+  const st = document.getElementById('airtable-status');
+  if (st) st.textContent = '';
+}
+
+async function saveToAirtable() {
+  const BASE_ID    = 'app8XtsdMJQfLbGQ8';
+  const TABLE_NAME = 'Daily Log';
+
+  const btn = document.getElementById('airtable-btn');
+  const st  = document.getElementById('airtable-status');
+
+  // Get token from localStorage
+  const AIRTABLE_TOKEN = localStorage.getItem('airtable_token');
+  if (!AIRTABLE_TOKEN) {
+    document.getElementById('settings-panel').style.display = 'block';
+    st.textContent = '⚠ Please enter your Airtable token in settings below.';
+    st.style.color = 'var(--danger)';
+    return;
+  }
+
+  if (!window._lastEntry) {
+    st.textContent = '⚠ Please calculate first.';
+    st.style.color = 'var(--danger)';
+    return;
+  }
+
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+  st.textContent = '';
+  st.style.color = 'var(--muted)';
+
+  const e = window._lastEntry;
+
+  const fields = {
+    'Date':                          e.date,
+    'Readiness Score (Composite)':   e.score,
+    'Training Recommendation':       e.recommendation,
+    'Ōura Readiness Score':          e.oura_r,
+    'Ōura HRV (ms)':                 e.oura_hrv,
+    'Ōura Resting HR (bpm)':         e.oura_rhr,
+    'Ōura Sleep Score':              e.oura_sl,
+    'Morpheus Morning HRV (ms)':     e.m_hrv,
+    'Morpheus 7-day Baseline (ms)':  e.m_base,
+    'HRV % vs Baseline':             e.hrv_pct,
+    'Morpheus Score':                e.m_score,
+    'Athlytic Battery (%)':          e.ath_battery,
+    'Athlytic VO2 Max Trend':        e.ath_vo2,
+    'Sleep Disruption Risk':         e.sleep_risk,
+    'Sleep Trend (3 nights)':        e.sl_trend,
+  };
+
+  if (e.oura_deep      !== '') fields['Ōura Deep Sleep (mins)']      = Number(e.oura_deep);
+  if (e.oura_rem       !== '') fields['Ōura REM Sleep (mins)']       = Number(e.oura_rem);
+  if (e.oura_total     !== '') fields['Ōura Total Sleep (mins)']     = Number(e.oura_total);
+  if (e.oura_awakenings!== '') fields['Ōura Awakenings']             = Number(e.oura_awakenings);
+  if (e.oura_latency   !== '') fields['Ōura Sleep Latency (mins)']   = Number(e.oura_latency);
+  if (e.as_qual        !== '') fields['AutoSleep Quality (%)']        = Number(e.as_qual);
+  if (e.ath_load       !== '') fields['Athlytic Training Status']     = e.ath_load;
+  if (e.subj_feel      !== '') fields['Subjective Wellbeing (1-10)']  = Number(e.subj_feel);
+  if (e.soreness       !== '') fields['Muscle Soreness (1-5)']        = Number(e.soreness);
+  if (e.days_hard      !== '') fields['Days Since Last Hard Session']  = Number(e.days_hard);
+
+  try {
+    const url = `https://api.airtable.com/v0/${BASE_ID}/${encodeURIComponent(TABLE_NAME)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({ fields }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      btn.textContent      = '✓ Saved to Airtable';
+      btn.style.background = 'var(--accent)';
+      st.textContent       = `Record saved — ${e.date}`;
+      st.style.color       = 'var(--accent)';
+    } else {
+      throw new Error(data.error?.message || 'Unknown error');
+    }
+  } catch (err) {
+    btn.textContent      = '☁ Save to Airtable';
+    btn.disabled         = false;
+    btn.style.background = '#1a5fa0';
+    st.textContent       = `⚠ Error: ${err.message}`;
+    st.style.color       = 'var(--danger)';
+  }
+}
+
+function saveToken() {
+  const token = document.getElementById('token-input').value.trim();
+  if (!token.startsWith('pat')) {
+    document.getElementById('token-status').textContent = '⚠ Token should start with "pat" — please check and try again.';
+    return;
+  }
+  localStorage.setItem('airtable_token', token);
+  document.getElementById('token-input').value = '';
+  document.getElementById('token-status').textContent = '✓ Token saved securely on this device.';
+  document.getElementById('token-status').style.color = 'var(--accent)';
+  setTimeout(() => {
+    document.getElementById('settings-panel').style.display = 'none';
+    document.getElementById('token-status').textContent = '';
+  }, 2000);
+}
+
+function clearToken() {
+  localStorage.removeItem('airtable_token');
+  document.getElementById('token-status').textContent = 'Token cleared.';
+}
+
+// Show settings panel on load if no token saved
+window.addEventListener('load', () => {
+  if (!localStorage.getItem('airtable_token')) {
+    document.getElementById('settings-panel').style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
